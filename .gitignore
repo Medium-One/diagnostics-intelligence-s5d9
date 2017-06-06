@@ -1,7 +1,5 @@
 .module_descriptions
 Debug/
-*.jlink
-*.launch
 m1/*.a
 synergy_cfg.txt
 userpackexportsettings.xml
