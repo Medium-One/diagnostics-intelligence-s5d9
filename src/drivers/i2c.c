@@ -39,7 +39,7 @@
 #define I2C_RETRIES 3
 #define I2C_TX_BUFFER_SIZE 50
 
-#define USE_I2C_CALLBACK
+//#define USE_I2C_CALLBACK
 
 
 enum I2C_STATUS {
@@ -181,11 +181,19 @@ static enum I2C_STATUS i2c_register_transfer(uint8_t i2c_address,
                                         bool retry) {
     uint8_t tx_buf[I2C_TX_BUFFER_SIZE];
 
-    if (tx_bytes >= I2C_TX_BUFFER_SIZE)
+    if (tx_bytes >= I2C_TX_BUFFER_SIZE) {
+#ifdef USE_M1DIAG
+        M1_LOG(error, "I2C transfer size too large", (int)tx_bytes);
+#endif
         return I2C_ERR_TRANSFER_SIZE;
+    }
 
-    if (!tx_data && tx_bytes)
+    if (!tx_data && tx_bytes) {
+#ifdef USE_M1DIAG
+        M1_LOG(error, "I2C write specified with NULL pointer", I2C_ERR_NULL_PTR);
+#endif
         return I2C_ERR_NULL_PTR;
+    }
 
     tx_buf[0] = register_address;
 

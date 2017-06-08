@@ -453,7 +453,7 @@
       <property id="module.driver.i2c.rate" value="module.driver.i2c.rate.rate_fast"/>
       <property id="module.driver.i2c.slave" value="0x00"/>
       <property id="module.driver.i2c.addr_mode" value="module.driver.i2c.addr_mode.addr_mode_7bit"/>
-      <property id="module.driver.i2c.p_callback" value="flakey_i2c"/>
+      <property id="module.driver.i2c.p_callback" value="NULL"/>
       <property id="module.driver.i2c.rxi_ipl" value="board.icu.common.irq.priority6"/>
       <property id="module.driver.i2c.txi_ipl" value="board.icu.common.irq.priority6"/>
       <property id="module.driver.i2c.tei_ipl" value="board.icu.common.irq.priority6"/>
