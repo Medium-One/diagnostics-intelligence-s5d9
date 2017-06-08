@@ -64,16 +64,17 @@ void ms_thread_entry(void) {
     ms5637_init();
     if (!ms5637_is_connected())
         tx_thread_suspend(&ms_thread);
-    ms5637_reset();
-    tx_thread_sleep(5);
+    if (ms5637_reset() != ms5637_status_ok)
+        tx_thread_suspend(&ms_thread);
 
     while (1) {
         status = tx_event_flags_get(&g_sensor_event_flags, MS_TRANSFER_REQUEST | MS_THRESHOLD_UPDATE | MS_SAMPLE_REQUEST, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
         if (status == TX_SUCCESS) {
             if (actual_flags & MS_SAMPLE_REQUEST) {
-                ms5637_read_temperature_and_pressure(&temp2_last, &pressure_last);
-                update_agg(&temp3, temp2_last);
-                update_agg(&pressure, pressure_last);
+                if (ms5637_read_temperature_and_pressure(&temp2_last, &pressure_last) == ms5637_status_ok) {
+                    update_agg(&temp3, temp2_last);
+                    update_agg(&pressure, pressure_last);
+                }
             }
             if (actual_flags & MS_THRESHOLD_UPDATE) {
                 update_threshold((agg_t *)&g_temp3, &temp3);

@@ -35,6 +35,9 @@
 #define MAG_ADDR        0x13
 
 
+extern TX_THREAD bmc_thread;
+
+
 #ifdef USE_M1DIAG
 volatile agg_t x = { .name = "x_accel", .total = 0, .min = 0, .max = 0, .count = 0, .last_sent = 0, .value = 0, .threshold = 0, .absolute_threshold = 0, .last_sent_tick = 0 };
 volatile agg_t y = { .name = "y_accel", .total = 0, .min = 0, .max = 0, .count = 0, .last_sent = 0, .value = 0, .threshold = 0, .absolute_threshold = 0, .last_sent_tick = 0 };
@@ -69,6 +72,7 @@ void bmc_thread_entry(void)
 {
     ULONG status;
     ULONG actual_flags;
+    int ret;
     struct bma2x2_accel_data_temp sample_xyzt;
     struct bmm050_mag_data_float_t data_float;
     struct bma2x2_t bma2x2 = {0};
@@ -98,12 +102,29 @@ void bmc_thread_entry(void)
     bma2x2.bus_write = bmc150_write;
     bma2x2.delay_msec = WaitMsec;
     bma2x2.dev_addr = ACCEL_ADDR;
-    bma2x2_init(&bma2x2);
-    bma2x2_set_power_mode(BMA2x2_MODE_NORMAL);
-    bma2x2_set_i2c_wdt(0, 1);  // enable WDT
-    bma2x2_set_i2c_wdt(1, 0);  // set WDT period to 1ms
-    bma2x2_set_range(BMA2x2_RANGE_2G);
-    bma2x2_get_range(&range);
+    do {
+        ret = bma2x2_init(&bma2x2);
+        if (ret)
+            break;
+        ret = bma2x2_set_power_mode(BMA2x2_MODE_NORMAL);
+        if (ret)
+            break;
+        ret = bma2x2_set_i2c_wdt(0, 1);  // enable WDT
+        if (ret)
+            break;
+        ret = bma2x2_set_i2c_wdt(1, 0);  // set WDT period to 1ms
+        if (ret)
+            break;
+        ret = bma2x2_set_range(BMA2x2_RANGE_2G);
+        if (ret)
+            break;
+        ret = bma2x2_get_range(&range);
+        if (ret)
+            break;
+    } while (0);
+    if (ret)
+        tx_thread_suspend(&bmc_thread);
+
     switch (range) {
         case BMA2x2_RANGE_2G:
             scale = 0.00098f;
@@ -126,36 +147,42 @@ void bmc_thread_entry(void)
     bmm050.bus_write = bmc150_write;
     bmm050.delay_msec = WaitMsec;
     bmm050.dev_addr = MAG_ADDR;
-    bmm050_init(&bmm050);
-    bmm050_set_functional_state(BMM050_NORMAL_MODE);
+    ret = bmm050_init(&bmm050);
+    if (ret)
+        tx_thread_suspend(&bmc_thread);
+    ret = bmm050_set_functional_state(BMM050_NORMAL_MODE);
+    if (ret)
+        tx_thread_suspend(&bmc_thread);
 
     while (1) {
         status = tx_event_flags_get(&g_sensor_event_flags, BMC_TRANSFER_REQUEST | BMC_THRESHOLD_UPDATE | BMC_SAMPLE_REQUEST, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
         if (status == TX_SUCCESS) {
             if (actual_flags & BMC_SAMPLE_REQUEST) {
-                bma2x2_read_accel_xyzt(&sample_xyzt);
-                x_last = sample_xyzt.x * scale;
-                y_last = sample_xyzt.y * scale;
-                z_last = sample_xyzt.z * scale;
-                t_last = 23 + 0.5f * sample_xyzt.temp;
-                if (zero_crossing(x_last, x.value, x_prev_avg))
-                    x_zero_crossings++;
-                update_agg(&x, x_last);
-                if (zero_crossing(y_last, y.value, y_prev_avg))
-                    y_zero_crossings++;
-                update_agg(&y, y_last);
-                if (zero_crossing(z_last, z.value, z_prev_avg))
-                    z_zero_crossings++;
-                update_agg(&z, z_last);
-                update_agg(&temp1, t_last);
+                if (!bma2x2_read_accel_xyzt(&sample_xyzt)) {
+                    x_last = sample_xyzt.x * scale;
+                    y_last = sample_xyzt.y * scale;
+                    z_last = sample_xyzt.z * scale;
+                    t_last = 23 + 0.5f * sample_xyzt.temp;
+                    if (zero_crossing(x_last, x.value, x_prev_avg))
+                        x_zero_crossings++;
+                    update_agg(&x, x_last);
+                    if (zero_crossing(y_last, y.value, y_prev_avg))
+                        y_zero_crossings++;
+                    update_agg(&y, y_last);
+                    if (zero_crossing(z_last, z.value, z_prev_avg))
+                        z_zero_crossings++;
+                    update_agg(&z, z_last);
+                    update_agg(&temp1, t_last);
+                }
 
-                bmm050_read_mag_data_XYZ_float(&data_float);
-                xmag_last = data_float.datax;
-                ymag_last = data_float.datay;
-                zmag_last = data_float.dataz;
-                update_agg(&x_mag, xmag_last);
-                update_agg(&y_mag, ymag_last);
-                update_agg(&z_mag, zmag_last);
+                if (!bmm050_read_mag_data_XYZ_float(&data_float)) {
+                    xmag_last = data_float.datax;
+                    ymag_last = data_float.datay;
+                    zmag_last = data_float.dataz;
+                    update_agg(&x_mag, xmag_last);
+                    update_agg(&y_mag, ymag_last);
+                    update_agg(&z_mag, zmag_last);
+                }
             }
             if (actual_flags & BMC_THRESHOLD_UPDATE) {
                 update_threshold((agg_t *)&g_x, &x);
