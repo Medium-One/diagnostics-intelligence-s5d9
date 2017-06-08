@@ -42,6 +42,11 @@
 #define ENS_THRESHOLD_UPDATE    0x00000200
 #define MS_THRESHOLD_UPDATE     0x00000400
 #define ADC_THRESHOLD_UPDATE    0x00000800
+#define BMC_SAMPLE_REQUEST      0x00001000
+#define ENS_SAMPLE_REQUEST      0x00002000
+#define MS_SAMPLE_REQUEST       0x00004000
+#define ADC_BATCH_COMPLETE      0x00008000
+
 
 // on threshold based updates, send no more than once per this many ticks
 #define RATE_LIMIT      1000

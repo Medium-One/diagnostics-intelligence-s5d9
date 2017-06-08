@@ -130,32 +130,33 @@ void bmc_thread_entry(void)
     bmm050_set_functional_state(BMM050_NORMAL_MODE);
 
     while (1) {
-        bma2x2_read_accel_xyzt(&sample_xyzt);
-        x_last = sample_xyzt.x * scale;
-        y_last = sample_xyzt.y * scale;
-        z_last = sample_xyzt.z * scale;
-        t_last = 23 + 0.5f * sample_xyzt.temp;
-        if (zero_crossing(x_last, x.value, x_prev_avg))
-            x_zero_crossings++;
-        update_agg(&x, x_last);
-        if (zero_crossing(y_last, y.value, y_prev_avg))
-            y_zero_crossings++;
-        update_agg(&y, y_last);
-        if (zero_crossing(z_last, z.value, z_prev_avg))
-            z_zero_crossings++;
-        update_agg(&z, z_last);
-        update_agg(&temp1, t_last);
-
-        bmm050_read_mag_data_XYZ_float(&data_float);
-        xmag_last = data_float.datax;
-        ymag_last = data_float.datay;
-        zmag_last = data_float.dataz;
-        update_agg(&x_mag, xmag_last);
-        update_agg(&y_mag, ymag_last);
-        update_agg(&z_mag, zmag_last);
-
-        status = tx_event_flags_get(&g_sensor_event_flags, BMC_TRANSFER_REQUEST | BMC_THRESHOLD_UPDATE, TX_OR_CLEAR, &actual_flags, 0);
+        status = tx_event_flags_get(&g_sensor_event_flags, BMC_TRANSFER_REQUEST | BMC_THRESHOLD_UPDATE | BMC_SAMPLE_REQUEST, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
         if (status == TX_SUCCESS) {
+            if (actual_flags & BMC_SAMPLE_REQUEST) {
+                bma2x2_read_accel_xyzt(&sample_xyzt);
+                x_last = sample_xyzt.x * scale;
+                y_last = sample_xyzt.y * scale;
+                z_last = sample_xyzt.z * scale;
+                t_last = 23 + 0.5f * sample_xyzt.temp;
+                if (zero_crossing(x_last, x.value, x_prev_avg))
+                    x_zero_crossings++;
+                update_agg(&x, x_last);
+                if (zero_crossing(y_last, y.value, y_prev_avg))
+                    y_zero_crossings++;
+                update_agg(&y, y_last);
+                if (zero_crossing(z_last, z.value, z_prev_avg))
+                    z_zero_crossings++;
+                update_agg(&z, z_last);
+                update_agg(&temp1, t_last);
+
+                bmm050_read_mag_data_XYZ_float(&data_float);
+                xmag_last = data_float.datax;
+                ymag_last = data_float.datay;
+                zmag_last = data_float.dataz;
+                update_agg(&x_mag, xmag_last);
+                update_agg(&y_mag, ymag_last);
+                update_agg(&z_mag, zmag_last);
+            }
             if (actual_flags & BMC_THRESHOLD_UPDATE) {
                 update_threshold((agg_t *)&g_x, &x);
                 update_threshold((agg_t *)&g_y, &y);

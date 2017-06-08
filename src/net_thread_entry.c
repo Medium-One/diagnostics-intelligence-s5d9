@@ -606,6 +606,8 @@ void net_thread_entry(void)
     tx_thread_resume(&bmc_thread);
     tx_thread_resume(&ens_thread);
     tx_thread_resume(&ms_thread);
+    g_timer1.p_api->open(g_timer1.p_ctrl, g_timer1.p_cfg);
+    g_timer1.p_api->start(g_timer1.p_ctrl);
 
 #ifdef USE_M1DIAG
     m1_diag_register_acceleration(&x_accel_access, &y_accel_access, &z_accel_access);
@@ -663,5 +665,22 @@ err:
         tx_thread_sleep(100);
         set_leds(0, 0, 0);
         tx_thread_sleep(100);
+    }
+}
+
+void sensor_scheduler(timer_callback_args_t * p_args) {
+    static unsigned int ticks = 0;
+    ULONG flags_to_set = 0;
+
+    if (p_args->event == TIMER_EVENT_EXPIRED) {
+        ticks++;
+        if (!(ticks % 3))  // 2 kHz (accelerometer) provided by sensor, but we only need 333.33 Hz
+            flags_to_set |= BMC_SAMPLE_REQUEST;
+        if (!(ticks % 131))  // 130 ms conversion time for relative humidity & temp
+            flags_to_set |= ENS_SAMPLE_REQUEST;
+        if (!(ticks % 35))  // 17 ms conversion-time at OSR = 8192, once for pressure and once for temperature
+            flags_to_set |= MS_SAMPLE_REQUEST;
+        if (flags_to_set)
+            tx_event_flags_set(&g_sensor_event_flags, flags_to_set, TX_OR);
     }
 }

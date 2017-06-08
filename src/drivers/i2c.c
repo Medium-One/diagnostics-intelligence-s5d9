@@ -35,14 +35,17 @@
 #endif
 
 
+#define USE_I2C_CALLBACK
+
+
+#ifdef USE_I2C_CALLBACK
 #define FLAKY_I2C 0x01
 #define GOOD_I2C 0x02
-#define USE_I2C_CALLBACK
+
 
 /*
  * synergy i2c driver callback
  */
-#ifdef USE_I2C_CALLBACK
 void flakey_i2c(i2c_callback_args_t * p_args) {
     switch (p_args->event) {
         case I2C_EVENT_ABORTED:
@@ -65,6 +68,7 @@ signed char bmc150_write(uint8_t i2c_address, uint8_t register_address, uint8_t 
     ssp_err_t err;
     ULONG actual_flags;
     uint8_t temp_buf[50];
+    signed char ret = 0;
 
     tx_mutex_get(&g_i2c_bus_mutex, TX_WAIT_FOREVER);
     err = g_i2c0.p_api->slaveAddressSet(g_i2c0.p_ctrl, i2c_address, I2C_ADDR_MODE_7BIT);
@@ -72,7 +76,8 @@ signed char bmc150_write(uint8_t i2c_address, uint8_t register_address, uint8_t 
 #ifdef USE_M1DIAG
         M1_LOG(error, "Error setting slave address", err);
 #endif
-        return -1;
+        ret = -1;
+        goto error;
     }
     temp_buf[0] = register_address;
     memcpy(&temp_buf[1], buf, bytes);
@@ -84,19 +89,22 @@ signed char bmc150_write(uint8_t i2c_address, uint8_t register_address, uint8_t 
 #ifdef USE_M1DIAG
             M1_LOG(error, "Error writing to I2C bus", err);
 #endif
-            return -2;
+            ret = -2;
+            goto error;
         }
 #ifdef USE_I2C_CALLBACK
         tx_event_flags_get(&g_new_event_flags0, GOOD_I2C | FLAKY_I2C, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
     } while (actual_flags != GOOD_I2C);
 #endif
+error:
     tx_mutex_put(&g_i2c_bus_mutex);
-    return 0;
+    return ret;
 }
 
 signed char bmc150_read(uint8_t i2c_address, uint8_t register_address, uint8_t * buf, uint8_t bytes) {
     ssp_err_t err;
     ULONG actual_flags;
+    signed char ret = 0;
 
     tx_mutex_get(&g_i2c_bus_mutex, TX_WAIT_FOREVER);
     err = g_i2c0.p_api->slaveAddressSet(g_i2c0.p_ctrl, i2c_address, I2C_ADDR_MODE_7BIT);
@@ -104,7 +112,8 @@ signed char bmc150_read(uint8_t i2c_address, uint8_t register_address, uint8_t *
 #ifdef USE_M1DIAG
         M1_LOG(error, "Error setting slave address", err);
 #endif
-        return -1;
+        ret = -1;
+        goto error;
     }
 #ifdef USE_I2C_CALLBACK
     do {
@@ -114,7 +123,8 @@ signed char bmc150_read(uint8_t i2c_address, uint8_t register_address, uint8_t *
 #ifdef USE_M1DIAG
             M1_LOG(error, "Error writing to I2C bus", err);
 #endif
-            return -2;
+            ret = -2;
+            goto error;
         }
 #ifdef USE_I2C_CALLBACK
         tx_event_flags_get(&g_new_event_flags0, GOOD_I2C | FLAKY_I2C, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
@@ -125,15 +135,17 @@ signed char bmc150_read(uint8_t i2c_address, uint8_t register_address, uint8_t *
 #ifdef USE_M1DIAG
                 M1_LOG(error, "Error reading from I2C bus", err);
 #endif
-                return -3;
+                ret = -3;
+                goto error;
             }
 #ifdef USE_I2C_CALLBACK
             tx_event_flags_get(&g_new_event_flags0, GOOD_I2C | FLAKY_I2C, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
         }
     } while (actual_flags != GOOD_I2C);
 #endif
+error:
     tx_mutex_put(&g_i2c_bus_mutex);
-    return 0;
+    return ret;
 }
 
 /*
@@ -149,6 +161,7 @@ void WaitMsec(unsigned int ms) {
 int I2C_Write(int slave, void *writeBuf, int writeSize) {
     ssp_err_t err;
     ULONG actual_flags;
+    int ret = 0;
 
     tx_mutex_get(&g_i2c_bus_mutex, TX_WAIT_FOREVER);
     err = g_i2c0.p_api->slaveAddressSet(g_i2c0.p_ctrl, (uint16_t)slave, I2C_ADDR_MODE_7BIT);
@@ -156,7 +169,8 @@ int I2C_Write(int slave, void *writeBuf, int writeSize) {
 #ifdef USE_M1DIAG
         M1_LOG(error, "Error setting slave address", err);
 #endif
-        return -1;
+        ret = -1;
+        goto error;
     }
 #ifdef USE_I2C_CALLBACK
     do {
@@ -166,14 +180,16 @@ int I2C_Write(int slave, void *writeBuf, int writeSize) {
 #ifdef USE_M1DIAG
             M1_LOG(error, "Error writing to I2C bus", err);
 #endif
-            return -2;
+            ret = -2;
+            goto error;
         }
 #ifdef USE_I2C_CALLBACK
         tx_event_flags_get(&g_new_event_flags0, GOOD_I2C | FLAKY_I2C, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
     } while (actual_flags != GOOD_I2C);
 #endif
+error:
     tx_mutex_put(&g_i2c_bus_mutex);
-    return 0;
+    return ret;
 }
 
 /*
@@ -182,6 +198,7 @@ int I2C_Write(int slave, void *writeBuf, int writeSize) {
 int I2C_Read(int slave, void *writeBuf, int writeSize, void *readBuf, int readSize) {
     ssp_err_t err;
     ULONG actual_flags;
+    int ret = 0;
 
     tx_mutex_get(&g_i2c_bus_mutex, TX_WAIT_FOREVER);
     err = g_i2c0.p_api->slaveAddressSet(g_i2c0.p_ctrl, (uint16_t)slave, I2C_ADDR_MODE_7BIT);
@@ -189,7 +206,8 @@ int I2C_Read(int slave, void *writeBuf, int writeSize, void *readBuf, int readSi
 #ifdef USE_M1DIAG
         M1_LOG(error, "Error setting slave address", err);
 #endif
-        return -1;
+        ret = -1;
+        goto error;
     }
 #ifdef USE_I2C_CALLBACK
     do {
@@ -200,7 +218,8 @@ int I2C_Read(int slave, void *writeBuf, int writeSize, void *readBuf, int readSi
 #ifdef USE_M1DIAG
                 M1_LOG(error, "Error writing to I2C bus", err);
 #endif
-                return -2;
+                ret = -2;
+                goto error;
             }
 #ifdef USE_I2C_CALLBACK
             tx_event_flags_get(&g_new_event_flags0, GOOD_I2C | FLAKY_I2C, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
@@ -211,7 +230,8 @@ int I2C_Read(int slave, void *writeBuf, int writeSize, void *readBuf, int readSi
 #ifdef USE_M1DIAG
                     M1_LOG(error, "Error reading from I2C bus", err);
 #endif
-                    return -3;
+                    ret = -3;
+                    goto error;
                 }
 #ifdef USE_I2C_CALLBACK
                 tx_event_flags_get(&g_new_event_flags0, GOOD_I2C | FLAKY_I2C, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
@@ -219,12 +239,13 @@ int I2C_Read(int slave, void *writeBuf, int writeSize, void *readBuf, int readSi
 #endif
         } else {
             err = g_i2c0.p_api->read(g_i2c0.p_ctrl, readBuf, (uint32_t)readSize, false);
-#ifdef USE_M1DIAG
             if (err != SSP_SUCCESS) {
+#ifdef USE_M1DIAG
                 M1_LOG(error, "Error reading from I2C bus", err);
-                return -3;
-            }
 #endif
+                ret = -3;
+                goto error;
+            }
 #ifdef USE_I2C_CALLBACK
             tx_event_flags_get(&g_new_event_flags0, GOOD_I2C | FLAKY_I2C, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
 #endif
@@ -232,8 +253,9 @@ int I2C_Read(int slave, void *writeBuf, int writeSize, void *readBuf, int readSi
 #ifdef USE_I2C_CALLBACK
     } while (actual_flags != GOOD_I2C);
 #endif
+error:
     tx_mutex_put(&g_i2c_bus_mutex);
-    return 0;
+    return ret;
 }
 
 

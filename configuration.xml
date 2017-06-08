@@ -213,6 +213,14 @@
       <description>Secure Cryptography Engine: Provides=[TRNG, AES, HASH, RSA, DSA, TDES]</description>
       <originalPack>Renesas.Synergy.1.2.1.pack</originalPack>
     </component>
+    <component apiversion="" class="Framework Services" condition="" group="all" subgroup="sf_adc_periodic" variant="" vendor="Renesas" version="1.2.1">
+      <description>Framework ADC Periodic: Provides=[Framework ADC Periodic] , Requires=[ThreadX ,ADC ,Timer]</description>
+      <originalPack>Renesas.Synergy.1.2.1.pack</originalPack>
+    </component>
+    <component apiversion="" class="HAL Drivers" condition="" group="all" subgroup="r_gpt" variant="" vendor="Renesas" version="1.2.1">
+      <description>General Purpose Timer: Provides=[Timer ,GPT]</description>
+      <originalPack>Renesas.Synergy.1.2.1.pack</originalPack>
+    </component>
   </synergyComponentSelection>
   <synergyIcuConfiguration/>
   <synergyMessagingConfiguration/>
@@ -419,7 +427,7 @@
       <property id="module.driver.adc.sample_hold_mask.channel_2" value="module.driver.adc.sample_hold_mask.channel_2.unused"/>
       <property id="module.driver.adc.sample_hold_states" value="24"/>
       <property id="module.driver.adc.p_callback" value="NULL"/>
-      <property id="module.driver.adc.scan_end_ipl" value="board.icu.common.irq.disabled"/>
+      <property id="module.driver.adc.scan_end_ipl" value="board.icu.common.irq.priority5"/>
       <property id="module.driver.adc.scan_end_b_ipl" value="board.icu.common.irq.disabled"/>
     </module>
     <module id="module.driver.sce_hash.69508537">
@@ -505,6 +513,65 @@
       <property id="module.driver.external_irq.p_callback" value="irq2_callback"/>
       <property id="module.driver.external_irq.irq_ipl" value="board.icu.common.irq.priority10"/>
     </module>
+    <module id="module.framework.sf_adc_periodic_on_sf_adc_periodic.1896888085">
+      <property id="module.framework.sf_adc_periodic.name" value="g_sf_adc_periodic0"/>
+      <property id="module.framework.sf_adc_periodic.data_buffer" value="g_adc_raw_data"/>
+      <property id="module.framework.sf_adc_periodic.data_buffer_length" value="16"/>
+      <property id="module.framework.sf_adc_periodic.sample_count" value="1"/>
+      <property id="module.framework.sf_adc_periodic.scan_trigger" value="module.framework.sf_adc_periodic.scan_trigger.gpt_channel_0"/>
+      <property id="module.framework.sf_adc_periodic.p_callback" value="g_adc_framework_user_callback"/>
+      <property id="module.framework.sf_adc_periodic.init_function" value="sf_adc_periodic_init0"/>
+      <property id="module.framework.sf_adc_periodic.init" value="module.framework.sf_adc_periodic.init.enable"/>
+    </module>
+    <module id="module.driver.timer_on_gpt.674142491">
+      <property id="module.driver.timer.name" value="g_timer0"/>
+      <property id="module.driver.timer.channel" value="0"/>
+      <property id="module.driver.timer.mode" value="module.driver.timer.mode.mode_periodic"/>
+      <property id="module.driver.timer.period" value="4"/>
+      <property id="module.driver.timer.unit" value="module.driver.timer.unit.unit_frequency_khz"/>
+      <property id="module.driver.timer.duty_cycle" value="50"/>
+      <property id="module.driver.timer.duty_cycle_unit" value="module.driver.timer.unit.unit_percent"/>
+      <property id="module.driver.timer.autostart" value="module.driver.timer.autostart.true"/>
+      <property id="module.driver.timer.gtioca_output_enabled" value="module.driver.timer.gtioca_output_enabled.false"/>
+      <property id="module.driver.timer.gtioca_stop_level" value="module.driver.timer.gtioca_stop_level.pin_level_low"/>
+      <property id="module.driver.timer.gtiocb_output_enabled" value="module.driver.timer.gtiocb_output_enabled.false"/>
+      <property id="module.driver.timer.gtiocb_stop_level" value="module.driver.timer.gtiocb_stop_level.pin_level_low"/>
+      <property id="module.driver.timer.p_callback" value="NULL"/>
+      <property id="module.driver.timer.irq_ipl" value="board.icu.common.irq.priority6"/>
+    </module>
+    <module id="module.driver.transfer_on_dtc.1255718877">
+      <property id="module.driver.transfer.name" value="g_transfer2"/>
+      <property id="module.driver.transfer.mode" value="module.driver.transfer.mode.mode_normal"/>
+      <property id="module.driver.transfer.size" value="module.driver.transfer.size.size_2_byte"/>
+      <property id="module.driver.transfer.dest_addr_mode" value="module.driver.transfer.dest_addr_mode.addr_mode_fixed"/>
+      <property id="module.driver.transfer.src_addr_mode" value="module.driver.transfer.src_addr_mode.addr_mode_fixed"/>
+      <property id="module.driver.transfer.repeat_area" value="module.driver.transfer.repeat_area.repeat_area_source"/>
+      <property id="module.driver.transfer.interrupt" value="module.driver.transfer.interrupt.interrupt_end"/>
+      <property id="module.driver.transfer.p_dest" value="NULL"/>
+      <property id="module.driver.transfer.p_src" value="NULL"/>
+      <property id="module.driver.transfer.length" value="0"/>
+      <property id="module.driver.transfer.num_blocks" value="0"/>
+      <property id="module.driver.transfer.activation_source" value="module.driver.transfer.event.event_elc_software_event_0"/>
+      <property id="module.driver.transfer.auto_enable" value="module.driver.transfer.auto_enable.true"/>
+      <property id="module.driver.transfer.p_callback" value="NULL"/>
+      <property id="module.driver.transfer.irq_ipl" value="board.icu.common.irq.disabled"/>
+    </module>
+    <module id="module.driver.timer_on_gpt.921779905">
+      <property id="module.driver.timer.name" value="g_timer1"/>
+      <property id="module.driver.timer.channel" value="1"/>
+      <property id="module.driver.timer.mode" value="module.driver.timer.mode.mode_periodic"/>
+      <property id="module.driver.timer.period" value="1"/>
+      <property id="module.driver.timer.unit" value="module.driver.timer.unit.unit_period_msec"/>
+      <property id="module.driver.timer.duty_cycle" value="50"/>
+      <property id="module.driver.timer.duty_cycle_unit" value="module.driver.timer.duty_cycle_unit.unit_percent"/>
+      <property id="module.driver.timer.autostart" value="module.driver.timer.autostart.false"/>
+      <property id="module.driver.timer.gtioca_output_enabled" value="module.driver.timer.gtioca_output_enabled.false"/>
+      <property id="module.driver.timer.gtioca_stop_level" value="module.driver.timer.gtioca_stop_level.pin_level_low"/>
+      <property id="module.driver.timer.gtiocb_output_enabled" value="module.driver.timer.gtiocb_output_enabled.false"/>
+      <property id="module.driver.timer.gtiocb_stop_level" value="module.driver.timer.gtiocb_stop_level.pin_level_low"/>
+      <property id="module.driver.timer.p_callback" value="sensor_scheduler"/>
+      <property id="module.driver.timer.irq_ipl" value="board.icu.common.irq.priority4"/>
+    </module>
     <context id="_hal.0">
       <stack module="module.driver.elc_on_elc.0"/>
       <stack module="module.driver.fmi_on_fmi.0"/>
@@ -568,6 +635,7 @@
         <stack module="module.driver.transfer_on_dtc.1883802420" requires="module.driver.i2c_on_riic.requires.transfer_tx"/>
         <stack module="module.driver.transfer_on_dtc.1268360983" requires="module.driver.i2c_on_riic.requires.transfer_rx"/>
       </stack>
+      <stack module="module.driver.timer_on_gpt.921779905"/>
       <object id="rtos.threadx.object.flags.533406001">
         <property id="rtos.threadx.object.flags.name" value="New Event Flags"/>
         <property id="rtos.threadx.object.flags.symbol" value="g_sensor_event_flags"/>
@@ -585,7 +653,11 @@
       <property id="rtos.threadx.thread.priority" value="15"/>
       <property id="rtos.threadx.thread.autostart" value="rtos.threadx.thread.autostart.disabled"/>
       <property id="rtos.threadx.thread.timeslice" value="1"/>
-      <stack module="module.driver.adc_on_adc.84508618"/>
+      <stack module="module.framework.sf_adc_periodic_on_sf_adc_periodic.1896888085">
+        <stack module="module.driver.adc_on_adc.84508618" requires="module.framework.sf_adc_periodic.requires.adc"/>
+        <stack module="module.driver.timer_on_gpt.674142491" requires="module.framework.sf_adc_periodic.requires.timer"/>
+        <stack module="module.driver.transfer_on_dtc.1255718877" requires="module.framework.sf_adc_periodic.requires.transfer"/>
+      </stack>
       <object id="rtos.threadx.object.flags.1356985479">
         <property id="rtos.threadx.object.flags.name" value="New Event Flags"/>
         <property id="rtos.threadx.object.flags.symbol" value="g_new_event_flags0"/>
@@ -595,7 +667,7 @@
       <property id="_symbol" value="bmc_thread"/>
       <property id="rtos.threadx.thread.name" value="BMC Thread"/>
       <property id="rtos.threadx.thread.stack" value="4096"/>
-      <property id="rtos.threadx.thread.priority" value="14"/>
+      <property id="rtos.threadx.thread.priority" value="15"/>
       <property id="rtos.threadx.thread.autostart" value="rtos.threadx.thread.autostart.disabled"/>
       <property id="rtos.threadx.thread.timeslice" value="1"/>
     </context>
@@ -745,6 +817,9 @@
     <config id="config.framework.sf_el_ux_dcd_fs">
       <property id="config.framework.sf_el_ux_dcd_fs.irq_ipl" value="board.icu.common.irq.priority2"/>
     </config>
+    <config id="config.framework.sf_adc_periodic">
+      <property id="config.framework.sf_adc_periodic.param_checking_enable" value="config.framework.sf_adc_periodic.param_checking_enable.bsp"/>
+    </config>
     <config id="config.el.nx_dns_client">
       <property id="config.el.nx_dns_client.control_tos" value="config.el.nx_dns_client.control_tos.normal"/>
       <property id="config.el.nx_dns_client.fragment_option" value="config.el.nx_dns_client.fragment_option.dont_fragment"/>
@@ -764,6 +839,9 @@
     </config>
     <config id="config.driver.riic">
       <property id="config.driver.riic.param_checking_enable" value="config.driver.riic.param_checking_enable.bsp"/>
+    </config>
+    <config id="config.driver.gpt">
+      <property id="config.driver.gpt.param_checking_enable" value="config.driver.gpt.param_checking_enable.bsp"/>
     </config>
     <config id="config.driver.icu">
       <property id="config.driver.icu.param_checking_enable" value="config.driver.icu.param_checking_enable.bsp"/>

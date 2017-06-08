@@ -39,11 +39,14 @@
 
 
 #define ADC_BASE_PTR  R_S12ADC0_Type *
+#define AVG_CNT 2000        // Sampling at 4Khz, average over .5 sec
 
 
 #ifdef USE_M1DIAG
 volatile agg_t mic = { .name = "mic", .total = 0, .min = 0, .max = 0, .count = 0, .last_sent = 0, .value = 0, .threshold = 0, .absolute_threshold = 0, .last_sent_tick = 0 };
 #endif
+
+static volatile uint16_t sound_level = 0;
 
 
 /******************************************************************************
@@ -63,28 +66,11 @@ void adc_thread_entry(void)
 {
     ssp_err_t err;
     ULONG actual_flags;
-    adc_data_size_t mic_sample;
     ADC_BASE_PTR p_adc;
     adc_instance_ctrl_t * p_ctrl = (adc_instance_ctrl_t *) g_adc0.p_ctrl;
-    agg_t mic_raw = { .name = "mic", .total = 0, .min = 0, .max = 0, .count = 0, .last_sent = 0, .value = 0, .threshold = 0, .absolute_threshold = 0, .last_sent_tick = 0 };
 #ifndef USE_M1DIAG
     agg_t mic = { .name = "mic", .total = 0, .min = 0, .max = 0, .count = 0, .last_sent = 0, .value = 0, .threshold = 0, .absolute_threshold = 0, .last_sent_tick = 0 };
 #endif
-
-    err = g_adc0.p_api->open(g_adc0.p_ctrl, g_adc0.p_cfg);
-    if (err != SSP_SUCCESS) {
-#ifdef USE_M1DIAG
-        M1_LOG(error, "Unable to open ADC", err);
-#endif
-        return;
-    }
-    err = g_adc0.p_api->scanCfg(g_adc0.p_ctrl, g_adc0.p_channel_cfg);
-    if (err != SSP_SUCCESS) {
-#ifdef USE_M1DIAG
-        M1_LOG(error, "Unable to configure ADC", err);
-#endif
-        return;
-    }
 
     p_adc = (ADC_BASE_PTR) p_ctrl->p_reg;
     /** Disable differential inputs */
@@ -92,39 +78,19 @@ void adc_thread_entry(void)
     /** Bypass PGA amplifier */
     p_adc->ADPGACR = 0x0111;
 
-    err = g_adc0.p_api->scanStart(g_adc0.p_ctrl);
+    err = g_sf_adc_periodic0.p_api->start(g_sf_adc_periodic0.p_ctrl);
     if (err != SSP_SUCCESS) {
 #ifdef USE_M1DIAG
-        M1_LOG(error, "Unable to start ADC scan", err);
+        M1_LOG(error, "Unable to start ADC periodic framework", err);
 #endif
         return;
     }
 
     while (1) {
-        switch (g_adc0.p_api->scanStatusGet(g_adc0.p_ctrl)) {
-            case SSP_SUCCESS:
-                g_adc0.p_api->read(g_adc0.p_ctrl, ADC_REG_CHANNEL_1, (adc_data_size_t * const) &mic_sample);
-                update_agg(&mic_raw, mic_sample);
-                g_adc0.p_api->scanStart(g_adc0.p_ctrl);
-                if (mic_raw.count >= 150000) {
-                    update_agg(&mic, mic_raw.max - mic_raw.min);
-                    reset_agg(&mic_raw);
-                }
-                break;
-            case SSP_ERR_ASSERTION:
-            case SSP_ERR_NOT_OPEN:
-#ifdef USE_M1DIAG
-                M1_LOG(error, "Unable to communicate with ADC", g_adc0.p_api->scanStatusGet(g_adc0.p_ctrl));
-#endif
-                return;
-                break;
-            case SSP_ERR_IN_USE:
-            default:
-                break;
-        }
-
-        err = tx_event_flags_get(&g_sensor_event_flags, ADC_TRANSFER_REQUEST | ADC_THRESHOLD_UPDATE, TX_OR_CLEAR, &actual_flags, 0);
+        err = tx_event_flags_get(&g_sensor_event_flags, ADC_TRANSFER_REQUEST | ADC_THRESHOLD_UPDATE | ADC_BATCH_COMPLETE, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
         if (err == TX_SUCCESS) {
+            if (actual_flags & ADC_BATCH_COMPLETE)
+                update_agg(&mic, sound_level);
             if (actual_flags & ADC_THRESHOLD_UPDATE)
                 update_threshold((agg_t *)&g_mic, &mic);
             if (actual_flags & ADC_TRANSFER_REQUEST) {
@@ -134,4 +100,26 @@ void adc_thread_entry(void)
             }
         }
     }
+}
+
+void g_adc_framework_user_callback(sf_adc_periodic_callback_args_t * p_args) {
+    static uint16_t sample_count=0;
+    static uint16_t max = 0U;
+    static uint16_t min = 4095U;
+    uint16_t data = g_adc_raw_data[p_args->buffer_index];
+
+
+    if (data > max)
+        max = data;
+    if (data < min)
+        min = data;
+
+    if (sample_count++ > AVG_CNT) {
+        sample_count = 0;
+        sound_level = (uint16_t) (max-min);
+        max = 0U;
+        min = 4095U;
+        tx_event_flags_set(&g_sensor_event_flags, ADC_BATCH_COMPLETE, TX_OR);
+    }
+
 }

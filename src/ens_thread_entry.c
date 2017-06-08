@@ -65,39 +65,34 @@ void ens_thread_entry(void)
     ULONG actual_flags;
 
     while (1) {
-        //Start the measurement
-        status = ENS210_SensStart_Set(ENS210_SENSSTART_T_START | ENS210_SENSSTART_H_START);
-        if (status == I2C_RESULT_OK) {
-            //Wait for sensor measurement
-            WaitMsec(ENS210_T_H_CONVERSION_TIME_MS);
+        status = (int)tx_event_flags_get(&g_sensor_event_flags, ENS_TRANSFER_REQUEST | ENS_THRESHOLD_UPDATE | ENS_SAMPLE_REQUEST, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
+        if (status == TX_SUCCESS) {
+            if (actual_flags & ENS_SAMPLE_REQUEST) {
+                //Start the measurement
+                status = ENS210_SensStart_Set(ENS210_SENSSTART_T_START | ENS210_SENSSTART_H_START);
+                if (status == I2C_RESULT_OK) {
+                    //Wait for sensor measurement
+                    WaitMsec(ENS210_T_H_CONVERSION_TIME_MS);
 
-            //Get the temperature and humidity raw value
-            status = ENS210_THVal_Get(&T_Raw, &H_Raw);
+                    //Get the temperature and humidity raw value
+                    status = ENS210_THVal_Get(&T_Raw, &H_Raw);
 
-            if (status == I2C_RESULT_OK) {
+                    if (status == I2C_RESULT_OK) {
 
-                //Verify the temperature raw value
-                if (ENS210_IsCrcOk(T_Raw) && ENS210_IsDataValid(T_Raw)) {
-                    temp_last = (float)ENS210_ConvertRawToCelsius(T_Raw, 1000) / 1000.0f;
-#ifdef USE_M1DIAG_PERIPHERALS
-                    temp_ready = 1;
-#endif
-                    update_agg(&temp2, temp_last);
-                }
+                        //Verify the temperature raw value
+                        if (ENS210_IsCrcOk(T_Raw) && ENS210_IsDataValid(T_Raw)) {
+                            temp_last = (float)ENS210_ConvertRawToCelsius(T_Raw, 1000) / 1000.0f;
+                            update_agg(&temp2, temp_last);
+                        }
 
-                //Verify the relative humidity raw value
-                if (ENS210_IsCrcOk(H_Raw) && ENS210_IsDataValid(H_Raw)) {
-                    humidity_last = (float)ENS210_ConvertRawToPercentageH(H_Raw, 1000) / 1000.0f;
-#ifdef USE_M1DIAG_PERIPHERALS
-                    humidity_ready = 1;
-#endif
-                    update_agg(&humidity, humidity_last);
+                        //Verify the relative humidity raw value
+                        if (ENS210_IsCrcOk(H_Raw) && ENS210_IsDataValid(H_Raw)) {
+                            humidity_last = (float)ENS210_ConvertRawToPercentageH(H_Raw, 1000) / 1000.0f;
+                            update_agg(&humidity, humidity_last);
+                        }
+                    }
                 }
             }
-        }
-
-        status = (int)tx_event_flags_get(&g_sensor_event_flags, ENS_TRANSFER_REQUEST | ENS_THRESHOLD_UPDATE, TX_OR_CLEAR, &actual_flags, 0);
-        if (status == TX_SUCCESS) {
             if (actual_flags & ENS_THRESHOLD_UPDATE) {
                 update_threshold((agg_t *)&g_temp2, &temp2);
                 update_threshold((agg_t *)&g_humidity, &humidity);
