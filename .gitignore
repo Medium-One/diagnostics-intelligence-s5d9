@@ -1,6 +1,5 @@
 .module_descriptions
 Debug/
-m1/*.a
 synergy_cfg.txt
 userpackexportsettings.xml
 src/synergy_gen/

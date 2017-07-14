@@ -91,6 +91,11 @@ int m1_diag_start(const char * mqtt_url,
                     LOG_LEVEL logging_level,
                     adc_instance_t * adc_inst
                     );
+int m1_diag_start_2(m1_connect_params * params,
+                    unsigned int diag_interval,
+                    m1_diag_initdata_t * initdata,
+                    LOG_LEVEL logging_level,
+                    adc_instance_t * adc_inst);
 
 /*
  *

@@ -70,7 +70,7 @@
  * 		mqtt_heart_beat:period (seconds) between MQTT ping (recommended 300 seconds)
  * 		tls_enabled: 	1 to use TLS
  *		ssl_mem:		optional pointer to start of contiguous memory block to be used by SSL.
- *						should be ~30k for successful TLS connections. if not specified, memory is allocated from heap
+ *						should be ~35k for successful TLS connections. if not specified, memory is allocated from heap
  *		ssl_mem_size:	optional size of contiguous memory block pointed to by ssl_mem
  *		p_ppool:		pointer to NX_PACKET_POOL instance to use
  *		p_ip:			pointer to NX_IP instance to use
@@ -105,6 +105,7 @@ int m1_auto_enroll_connect(const char * mqtt_url,
 			                NX_PACKET_POOL * p_ppool,
 			                NX_IP * p_ip,
 			                NX_DNS * p_dns);
+int m1_auto_enroll_connect_2(m1_connect_params * params);
 
 /*
  *

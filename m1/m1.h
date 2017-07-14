@@ -26,7 +26,11 @@
 #define M1_H_
 
 
-#define M1_VERSION_STRING "1.2.0"
+#include <nx_api.h>
+#include <nx_dns.h>
+
+
+#define M1_VERSION_STRING "1.2.1"
 
 
 // Error Codes
@@ -53,5 +57,26 @@ typedef struct {
     char apikey[49];
     char proj_id[12];
 } project_credentials_t;
+
+
+typedef struct {
+    const char * mqtt_url;
+    int mqtt_port;
+    const project_credentials_t * project;
+    const user_credentials_t * registration;
+    user_credentials_t * device;
+    const char * device_id;
+    int retry_limit;
+    int retry_delay;
+    int mqtt_heart_beat;
+    int tls_enabled;
+    void * ssl_mem;
+    int ssl_mem_size;
+    NX_PACKET_POOL * p_ppool;
+    NX_IP * p_ip;
+    NX_DNS * p_dns;
+    const char * login_id;
+} m1_connect_params;
+
 
 #endif /* M1_H_ */
