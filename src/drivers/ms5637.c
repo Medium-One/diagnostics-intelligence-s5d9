@@ -35,7 +35,7 @@ extern "C" {
 #define MS5637_CONVERSION_TIME_OSR_1024								3000
 #define MS5637_CONVERSION_TIME_OSR_2048								5000
 #define MS5637_CONVERSION_TIME_OSR_4096								9000
-#define MS5637_CONVERSION_TIME_OSR_8192								17000
+#define MS5637_CONVERSION_TIME_OSR_8192								40000  // 17000 <- not sure why original value doesn't work
 
 // MS5637 commands
 #define MS5637_PROM_ADDRESS_READ_ADDRESS_0							0xA0
