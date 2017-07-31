@@ -31,6 +31,8 @@
 
 
 #define M1_VERSION_STRING "1.2.1"
+#define MAX_CERT_LENGTH 1536
+#define MAX_KEY_LENGTH 2048
 
 
 // Error Codes
@@ -76,6 +78,8 @@ typedef struct {
     NX_IP * p_ip;
     NX_DNS * p_dns;
     const char * login_id;
+    const char * device_cert;
+    const char * device_key;
 } m1_connect_params;
 
 

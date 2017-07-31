@@ -625,7 +625,7 @@
     <context id="rtos.threadx.thread.1739186845">
       <property id="_symbol" value="net_thread"/>
       <property id="rtos.threadx.thread.name" value="Net Thread"/>
-      <property id="rtos.threadx.thread.stack" value="8192"/>
+      <property id="rtos.threadx.thread.stack" value="16384"/>
       <property id="rtos.threadx.thread.priority" value="15"/>
       <property id="rtos.threadx.thread.autostart" value="rtos.threadx.thread.autostart.disabled"/>
       <property id="rtos.threadx.thread.timeslice" value="1"/>

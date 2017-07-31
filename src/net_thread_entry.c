@@ -156,18 +156,14 @@ void m1_callback(int type, char * topic, char * msg, int length);
 static int get_line(FILE * f, char * out, size_t out_size, uint8_t eof_ok) {
     char buf[200];
 
-    do {
-        if (fgets(buf, sizeof(buf), f) == NULL) {
-            // EOF encountered, or error
-            if (!eof_ok)
-                return -1;
-            if (!feof(f))  // not EOF, so an error
-                return -2;
-            buf[strcspn(buf, "\r\n")] = 0;
-            break;
-        }
-        buf[strcspn(buf, "\r\n")] = 0;
-    } while (!strnlen(buf, sizeof(buf)));
+    if (fgets(buf, sizeof(buf), f) == NULL) {
+        // EOF encountered, or error
+        if (!eof_ok)
+            return -1;
+        if (!feof(f))  // not EOF, so an error
+            return -2;
+    }
+    buf[strcspn(buf, "\r\n")] = 0;
     strncpy(out, buf, out_size);
     return 0;
 }
@@ -195,7 +191,7 @@ static int extract_credentials_from_config(project_credentials_t * project, user
         ret = -2;
         goto end;
     }
-    if (get_line(config_file, project->proj_id, sizeof(project->proj_id), 0)) {
+    if (get_line(config_file, project->proj_id, sizeof(project->proj_id), 1)) {
         ret = -3;
         goto end;
     }
@@ -329,6 +325,51 @@ static uint32_t bytes_to_df_blocks(uint32_t bytes) {
     return bytes / DATA_FLASH_BLOCK_SIZE + 1;
 }
 
+void toggle_green_led(void) {
+    toggle_leds(0, 0, 1);
+}
+
+int read_certs_and_connect(char * p_mqtt_broker_host,
+                           int mqtt_broker_port,
+                           project_credentials_t * project,
+                           user_credentials_t * registration,
+                           user_credentials_t * device) {
+    char cert_buf[MAX_CERT_LENGTH];
+    char key_buf[MAX_KEY_LENGTH];
+
+    m1_connect_params params = {
+                                .mqtt_url = p_mqtt_broker_host,
+                                .mqtt_port = mqtt_broker_port,
+                                .project = project,
+                                .registration = registration,
+                                .device = device,
+                                .device_id = "s5d9",
+                                .retry_delay = 5,
+                                .retry_limit = 5,
+                                .mqtt_heart_beat = 60,
+                                .tls_enabled = 1,
+                                .ssl_mem = ssl_mem,
+                                .ssl_mem_size = SSL_MEM_SIZE,
+                                .p_ppool = &g_http_packet_pool,
+                                .p_ip = &g_http_ip,
+                                .p_dns = &g_dns_client,
+    };
+    FILE * device_cert = fopen("device.crt", "r");
+    FILE * device_key = fopen("device.key", "r");
+    if (device_cert && device_key) {
+        memset(cert_buf, 0, sizeof(cert_buf));
+        memset(key_buf, 0, sizeof(key_buf));
+        fread(cert_buf, MAX_CERT_LENGTH, 1, device_cert);
+        fread(key_buf, MAX_KEY_LENGTH, 1, device_key);
+        fclose(device_cert);
+        fclose(device_key);
+        params.device_cert = cert_buf;
+        params.device_key = key_buf;
+    }
+
+    return m1_auto_enroll_connect_2(&params);
+}
+
 /*
  * extracts credentials from m1config.txt, and optionally m1user.txt and
  * m1broker.txt.
@@ -369,6 +410,8 @@ void net_thread_entry(void)
     user_credentials_t device, original_device, registration;
     original_device.user_id[0] = '\0';
     original_device.password[0] = '\0';
+    registration.user_id[0] = '\0';
+    registration.password[0] = '\0';
 #ifdef USE_M1DIAG
     const project_credentials_t diag_project = {
         .proj_id="Ohafs8Q31jU",
@@ -437,8 +480,7 @@ void net_thread_entry(void)
         if ((ret >= 2) && !provisioned) {
             memcpy(&original_diag_device, &diag_device, sizeof(original_diag_device));
 #else
-        ret = sscanf(&buf[1], "%*d;%11s;%63s", device.user_id, device.password);
-        if ((ret == 2) && !provisioned) {
+        if (!provisioned && (sscanf(&buf[1], "%*d;%11s;%63s", device.user_id, device.password) == 2)) {
 #endif
             provisioned = 1;
             memcpy(&original_device, &device, sizeof(original_device));
@@ -515,22 +557,7 @@ void net_thread_entry(void)
 #endif
 
     ret = m1_register_subscription_callback(m1_callback);
-    ret = m1_auto_enroll_connect(p_mqtt_broker_host,
-                        mqtt_broker_port,
-                        &project,
-                        &registration,
-                        &device,
-                        "s5d9",
-                        5,
-                        5,
-                        60,
-                        1,
-                        ssl_mem,
-                        SSL_MEM_SIZE,
-                        &g_http_packet_pool,
-                        &g_http_ip,
-                        &g_dns_client);
-
+    ret = read_certs_and_connect(p_mqtt_broker_host, mqtt_broker_port, &project, &registration, &device);
     if (ret != M1_SUCCESS)
         goto err;
 
